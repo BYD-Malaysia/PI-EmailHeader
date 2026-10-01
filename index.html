@@ -20,7 +20,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td,th{padding:6px;bor
 <div class="hd"><b>Payment Slip Upload</b><div>BYD Malaysia Sdn. Bhd. · DENZA Proforma Invoice</div></div>
 <div class="wrap" id="app"></div>
 <script>
-var API='https://script.google.com/macros/s/AKfycbwiNiSUrZhKDd3Oms9EEcNQCHjmJr2QpREnDwMYzFZxz9CzmrqDdr9Q0Z_FUh19Zsi26g/exec';
+var API='https://script.google.com/macros/s/AKfycbxtYENX8eu-LLw2nNbHCAxWKy2KkdYB4UcGcxJECSEAt6TI9x4R4b2ajcVH_QEnCwKjxw/exec';
 var Q=new URLSearchParams(location.search);
 function post(b){return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)}).then(function(r){return r.json()})}
 var A=document.getElementById('app');A.innerHTML='<div class="card" style="text-align:center;color:#667">Loading your Proforma Invoice…</div>';
