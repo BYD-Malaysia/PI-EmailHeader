@@ -20,7 +20,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td,th{padding:6px;bor
 <div class="hd"><b>Payment Slip Upload</b><div>BYD Malaysia Sdn. Bhd. · DENZA Proforma Invoice</div></div>
 <div class="wrap" id="app"></div>
 <script>
-var API='https://script.google.com/macros/s/AKfycbwf5AADWB8DvIvsBQTlZYfmTKSS1wfkvwkBAmngWtPnsB_qLKQ91PMRxtR2evSL2t1Sbg/exec';
+var API='https://script.google.com/macros/s/AKfycbzCBAkIewoAGDX6tROHNrwCFLDAtXf3m_5U_Xv-hq4-FVUPz6WvEd5j9h4rRwAIOgamyw/exec';
 var Q=new URLSearchParams(location.search);
 function post(b){return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)}).then(function(r){return r.json()})}
 var A=document.getElementById('app');A.innerHTML='<div class="card" style="text-align:center;color:#667">Loading your Proforma Invoice…</div>';
@@ -50,7 +50,7 @@ else{
   (!open.length?'<div class="card"><div class="msg ok">'+(multi?'These PIs are':'This PI is')+' fully paid. Thank you.</div></div>':
   '<div class="card" id="up"><h3>Upload payment slip'+(multi?' (one slip for all ticked PIs)':'')+'</h3><div class="row"><div><label>Payment date</label><input type="date" id="d" value="'+today+'"></div><div><label>Amount paid (RM)</label><input type="number" step="0.01" id="a" value="'+(multi?'':C.pis[0].balNum)+'"></div></div>'+
   '<div class="row"><div><label>Bank reference no.</label><input id="r"></div><div><label>Paying bank</label><input id="b"></div></div>'+
-  '<label>Payment slip (PDF / image, max 10 MB)</label><input type="file" id="f" accept="image/*,application/pdf">'+
+  '<label>Payment slip(s) — PDF / image, up to 5 files, max 10 MB each</label><input type="file" id="f" accept="image/*,application/pdf" multiple><div id="fl" style="margin-top:6px;font-size:13px"></div>'+
   '<label>Note (optional)</label><textarea id="n" rows="2"></textarea><button id="go">Submit payment slip</button><div id="m"></div></div>');
  function ticked(){if(!multi)return [C.pis[0].no];return Array.prototype.slice.call(document.querySelectorAll('.pk')).filter(function(x){return x.checked}).map(function(x){return C.pis[+x.dataset.k]})}
  function upd(){if(!multi)return;var t=ticked(),sum=t.reduce(function(a,p){return a+Number(p.balNum||0)},0);
@@ -60,17 +60,29 @@ else{
  if(multi){Array.prototype.forEach.call(document.querySelectorAll('.pk'),function(x){x.onchange=upd});
   document.getElementById('all').onchange=function(){var on=this.checked;Array.prototype.forEach.call(document.querySelectorAll('.pk:not(:disabled)'),function(x){x.checked=on});upd()};
   var ai=document.getElementById('a');if(ai)ai.oninput=function(){this.dataset.manual='1'};upd()}
+ var FL=[];
+ var fi=document.getElementById('f');
+ function drawFL(){var b=document.getElementById('fl');if(!b)return;b.innerHTML=FL.map(function(x,i){return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #eef1f5"><span>'+(i+1)+'. '+e(x.name)+' <span style="color:#8a94a3">('+(x.size/1048576).toFixed(1)+' MB)</span></span><a href="#" data-i="'+i+'" class="rmf" style="color:#c0392b;text-decoration:none">Remove</a></div>'}).join('')+(FL.length&&FL.length<5?'<div style="color:#8a94a3;margin-top:4px">Click “Choose Files” again to add more.</div>':'');
+  Array.prototype.forEach.call(b.querySelectorAll('.rmf'),function(a){a.onclick=function(ev){ev.preventDefault();FL.splice(+this.dataset.i,1);drawFL()}})}
+ if(fi)fi.onchange=function(){var m=document.getElementById('m');m.innerHTML='';Array.prototype.forEach.call(this.files,function(x){
+   if(FL.length>=5){m.innerHTML='<div class="msg err">Maximum 5 files.</div>';return}
+   if(x.size>10*1024*1024){m.innerHTML='<div class="msg err">'+e(x.name)+' is larger than 10 MB.</div>';return}
+   if(!FL.some(function(y){return y.name===x.name&&y.size===x.size}))FL.push(x)});this.value='';drawFL()};
+ function rd64(x){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res({fileName:x.name,mime:x.type,b64:String(r.result).split('base64,')[1]})};r.onerror=rej;r.readAsDataURL(x)})}
  var go=document.getElementById('go');
  if(go)go.onclick=function(){
-  var f=document.getElementById('f').files[0],m=document.getElementById('m'),t=ticked(),nos=multi?t.map(function(p){return p.no}):[C.pis[0].no];
+  var m=document.getElementById('m'),t=ticked(),nos=multi?t.map(function(p){return p.no}):[C.pis[0].no];
   if(!nos.length){m.innerHTML='<div class="msg err">Tick at least one Proforma Invoice.</div>';return}
   if(!(Number(document.getElementById('a').value)>0)){m.innerHTML='<div class="msg err">Please enter the amount paid.</div>';return}
-  if(!f){m.innerHTML='<div class="msg err">Please attach the payment slip.</div>';return}
-  if(f.size>10*1024*1024){m.innerHTML='<div class="msg err">File is larger than 10 MB.</div>';return}
-  go.disabled=true;go.textContent='Uploading…';
-  var rd=new FileReader();rd.onload=function(){
-   var pl={list:C.list,k:C.key,pis:nos,date:document.getElementById('d').value,amount:document.getElementById('a').value,ref:document.getElementById('r').value,bank:document.getElementById('b').value,note:document.getElementById('n').value,fileName:f.name,mime:f.type,b64:String(rd.result).split('base64,')[1]};pl.action='slipUpload';post(pl).then(function(j){if(j&&j.ok)(function(){document.getElementById('up').innerHTML='<div class="msg ok"><b>Thank you — your payment slip for '+e(nos.join(', '))+' was received.</b><br>Our team will verify it shortly.</div>'})();else (function(err){go.disabled=false;go.textContent='Submit payment slip';m.innerHTML='<div class="msg err">'+e(err.message||err)+'</div>'})({message:(j&&j.error)||'Upload failed'})}).catch(function(e){(function(err){go.disabled=false;go.textContent='Submit payment slip';m.innerHTML='<div class="msg err">'+e(err.message||err)+'</div>'})({message:'Upload failed — please check your connection and try again.'})});
-  };rd.readAsDataURL(f);
+  if(!FL.length){m.innerHTML='<div class="msg err">Please attach the payment slip.</div>';return}
+  if(FL.reduce(function(a,x){return a+x.size},0)>20*1024*1024){m.innerHTML='<div class="msg err">Total of all files must be under 20 MB.</div>';return}
+  go.disabled=true;go.textContent='Uploading '+FL.length+' file'+(FL.length>1?'s':'')+'…';
+  var fail=function(msg){go.disabled=false;go.textContent='Submit payment slip';m.innerHTML='<div class="msg err">'+e(msg)+'</div>'};
+  var done=function(){document.getElementById('up').innerHTML='<div class="msg ok"><b>Thank you — your payment slip'+(FL.length>1?'s':'')+' for '+e(nos.join(', '))+' '+(FL.length>1?'were':'was')+' received.</b><br>Our team will verify it shortly.</div>'};
+  Promise.all(FL.map(rd64)).then(function(files){
+   var pl={list:C.list,k:C.key,pis:nos,date:document.getElementById('d').value,amount:document.getElementById('a').value,ref:document.getElementById('r').value,bank:document.getElementById('b').value,note:document.getElementById('n').value,files:files};
+   pl.action='slipUpload';post(pl).then(function(j){if(j&&j.ok)done();else fail((j&&j.error)||'Upload failed')}).catch(function(){fail('Upload failed — please check your connection and try again.')});
+  }).catch(function(){fail('Could not read the file(s).')});
  };
 }
 }
